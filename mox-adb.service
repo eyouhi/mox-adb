@@ -1,0 +1,16 @@
+[Unit]
+Description=Mox ADB Automation Service
+After=network.target adb.service
+
+[Service]
+Type=simple
+# User and WorkingDirectory will be replaced by install.sh
+User=liwis
+WorkingDirectory=/home/liwis/mox-adb
+ExecStart=/home/liwis/mox-adb/target/release/mox-adb
+Restart=always
+RestartSec=10
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
