@@ -7,6 +7,44 @@ use std::env;
 use std::thread;
 use std::time::Duration;
 
+fn get_current_time() -> chrono::DateTime<Local> {
+    let mut server = ADBServer::default();
+    if let Ok(mut device) = server.get_device() {
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        if device
+            .shell_command(
+                &"date +%s",
+                Some(&mut stdout as &mut dyn std::io::Write),
+                Some(&mut stderr as &mut dyn std::io::Write),
+            )
+            .is_ok()
+        {
+            if let Ok(output) = String::from_utf8(stdout) {
+                if let Ok(timestamp) = output.trim().parse::<i64>() {
+                    if let Some(dt) = chrono::DateTime::from_timestamp(timestamp, 0) {
+                        let device_time = dt.with_timezone(&Local);
+                        let local_time = Local::now();
+                        let diff = device_time
+                            .signed_duration_since(local_time)
+                            .num_seconds()
+                            .abs();
+                        if diff > 60 {
+                            println!(
+                                "Warning: System time differs from device time by {} seconds. Using device time.",
+                                diff
+                            );
+                        }
+                        return device_time;
+                    }
+                }
+            }
+        }
+    }
+    println!("Warning: Could not get time from device, using system time.");
+    Local::now()
+}
+
 fn main() {
     println!("Starting Mox ADB Automation Scheduler...");
 
@@ -28,7 +66,7 @@ fn main() {
     }
 
     loop {
-        let now = Local::now();
+        let now = get_current_time();
         let next_run = get_next_run_time(now);
 
         let wait_duration = next_run
@@ -90,7 +128,7 @@ fn get_next_run_time(now: chrono::DateTime<Local>) -> chrono::DateTime<Local> {
             // Check evening slot
             let evening_start = candidate
                 .date_naive()
-                .and_hms_opt(18, 40, 0)
+                .and_hms_opt(17, 40, 0)
                 .unwrap()
                 .and_local_timezone(Local)
                 .unwrap();
@@ -189,6 +227,20 @@ fn run_automation() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     println!("DingTalk launch command sent.");
+
+    // 7. Wait 30 seconds
+    println!("Waiting for 30 seconds before locking screen...");
+    thread::sleep(Duration::from_secs(30));
+
+    // 8. Lock screen
+    println!("Locking screen: input keyevent KEYCODE_POWER");
+    device.shell_command(
+        &["input", "keyevent", "KEYCODE_POWER"].join(" "),
+        Some(&mut std::io::stdout()),
+        Some(&mut std::io::stderr()),
+    )?;
+    
+    println!("Screen locked.");
 
     Ok(())
 }
