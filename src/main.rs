@@ -228,9 +228,9 @@ fn run_automation() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("DingTalk launch command sent.");
 
-    // 7. Wait 30 seconds
-    println!("Waiting for 30 seconds before locking screen...");
-    thread::sleep(Duration::from_secs(30));
+    // 7. Wait 50 seconds
+    println!("Waiting for 50 seconds before locking screen...");
+    thread::sleep(Duration::from_secs(50));
 
     // 8. Lock screen
     println!("Locking screen: input keyevent KEYCODE_POWER");
